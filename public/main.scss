@@ -1,0 +1,51 @@
+/*변하지 않는 (static)파일들은 public 폴더에 넣습니다.*/
+/*scss, sass*/
+/*extension 을 설치했으니 vs코드 하단에 watch sass를 누르면 자동으로 변환된다..*/
+/*$변수 사용가능*/
+/*% 가상클래스 사용가능*/
+/*nesting가능*/
+
+@use "_reset.scss";
+/*
+_reset.$변수명;  다른 파일의 변수쓰는법 
+@include _reset.mixin이름();   다른 파일의 mixin쓰는법 
+*/
+
+$메인폰트: "맑은고딕";
+$변수연습: 20px;
+
+body {
+  font-family: $메인폰트;
+}
+
+%btn {
+  font-size: 16px;
+  padding: 10px;
+  background: grey;
+}
+
+.btn-green {
+  @extend .btn !optional;
+  background: green;
+}
+
+@mixin 버튼기본디자인($구멍) {
+  font-size: $구멍;
+  padding: 10px;
+}
+
+/* @mixin 버튼기본디자인($구멍, $구멍2) {
+  font-size: $구멍;
+  $구멍: 10px;
+
+  .btn-green {
+    @include 버튼기본디자인(16px, padding);
+    #{ $구멍2 }: green;
+  }
+
+} */
+
+.btn-green {
+  @include 버튼기본디자인(16px);
+  background: green;
+}

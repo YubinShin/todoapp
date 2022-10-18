@@ -1,0 +1,20 @@
+@charset "UTF-8";
+/*변하지 않는 (static)파일들은 public 폴더에 넣습니다.*/
+/*scss, sass*/
+/*extension 을 설치했으니 vs코드 하단에 watch sass를 누르면 자동으로 변환된다..*/
+/*$변수 사용가능*/
+/*% 가상클래스 사용가능*/
+/*nesting가능*/
+body {
+  font-family: "맑은고딕";
+}
+
+.btn-green {
+  background: green;
+}
+
+.btn-green {
+  font-size: 16px;
+  padding: 10px;
+  background: green;
+}/*# sourceMappingURL=main.css.map */
