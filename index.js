@@ -31,10 +31,15 @@ app.set("view engine", "ejs");
 app.use("/public", express.static("public"));
 /**  미들웨어 추가하기, 나는 static 파일을 보관하기 위해 public 폴더를 사용할게 */
 
+/**.env 파일에서 민감한 환경변수들 관리하기
+ * dotenv를 npm으로 인스톨함
+ */
+require("dotenv").config();
+
 var db;
 /**  db에 자료를 저장하기 위해 변수가 하나 필요하다 */
 MongoClient.connect(
-  "mongodb+srv:/** admin:qwer1234@cluster0.iggptud.mongodb.net/?retryWrites=true&w=majority",
+  process.env.DB_URL,
   { useUnifiedTopology: true },
   function (에러, client) {
     if (에러) return console.log(에러);
@@ -45,7 +50,7 @@ MongoClient.connect(
     /**  console.log('저장완료'); */
     /** }); */
     /** 연결되면 알려줘~ */
-    app.listen(8080, function () {
+    app.listen(process.env.PORT, function () {
       console.log("listening on 8080");
     });
   }
@@ -82,6 +87,10 @@ app.get("/list", function (요청, 응답) {
     });
 });
 
+app.get("/signin", function (요청, 응답) {
+  응답.render(`signin.ejs`);
+});
+
 app.get("/mongodb", function (요청, 응답) {
   응답.render(`mongodb.ejs`);
 });
@@ -90,13 +99,8 @@ app.get("/detail/:id", function (요청, 응답) {
   db.collection("post").findOne(
     { _id: parseInt(요청.params.id) },
     function (에러, 결과) {
-      if (에러) {
-        응답.status(400).send({ message: "실패했습니다." });
-        return console.log(에러);
-      } else {
-        console.log(결과);
-        응답.render(`detail.ejs`, { data: 결과 });
-      }
+      console.log(결과);
+      응답.render(`detail.ejs`, { data: 결과 });
     }
   );
 });
@@ -125,7 +129,12 @@ app.post("/add", function (요청, 응답) {
       var 총게시물갯수 = 결과.totalPost;
       /** name이 게시물갯수인 데이터를 찾아주세요. 이런 문을 쿼리문이라고 합니다. */
       db.collection("post").insertOne(
-        { _id: 총게시물갯수 + 1, 제목: 요청.body.title, 날짜: 요청.body.date },
+        {
+          _id: 총게시물갯수 + 1,
+          작성자: 요청.user._id,
+          제목: 요청.body.title,
+          날짜: 요청.body.date,
+        },
         function () {
           console.log("저장완료");
           /** 새 게시물을 기록하기 */
@@ -156,15 +165,18 @@ app.delete("/delete", function (요청, 응답) {
     요청.body._id
   ); /** 오브젝트 자료형 다루기 스킬(자료형을 Int로 바꾸기) */
   /** 요청.body에 담겨온 게시물번호를 db에서 찾아 삭제해주세요. */
-  db.collection("post").deleteOne(요청.body, function (에러, 결과) {
-    console.log("삭제완료");
-    응답.status(400).send({ message: "성공했습니다." });
-    /** if(에러){return 응답.status(400);} else {응답.status(200).send({message : '성공했습니다.'});}; */
-  });
+  db.collection("post").deleteOne(
+    { _id: 요청.body._id, 작성자: 요청.user._id },
+    function (에러, 결과) {
+      console.log("삭제완료");
+      console.log("에러", 에러);
+      응답.status(200).send({ message: "성공했습니다" });
+    }
+  );
   /** deleteOne({데이터를 찾는 쿼리문이 들어가면 됩니다}) */
 });
 
-app.put("/edit/:id", function (요청, 응답) {
+app.put("/edit", function (요청, 응답) {
   db.collection("post").updateOne(
     { _id: parseInt(요청.body.id) },
     { $set: { 제목: 요청.body.title, 날짜: 요청.body.date } },
@@ -173,13 +185,13 @@ app.put("/edit/:id", function (요청, 응답) {
       응답.redirect("/list");
     }
   );
-  /** 폼에 담긴 제목,날짜데이터를 가지고 */
-  /** db.colletion에 업데이트함 */
-  /** updateOne({바꿀 데이터를 찾는 쿼리문}, */
-  /** {$set : {제목 : ??}}, */
-  /** function(에러,결과){}) */
-  /** 요청.body.id html에서 온 요청중에 name이 id인 값을 찾아주세요 */
 });
+/** 폼에 담긴 제목,날짜데이터를 가지고 */
+/** db.colletion에 업데이트함 */
+/** updateOne({바꿀 데이터를 찾는 쿼리문}, */
+/** {$set : {제목 : ??}}, */
+/** function(에러,결과){}) */
+/** 요청.body.id html에서 온 요청중에 name이 id인 값을 찾아주세요 */
 
 /** 로그인 기능만들기 */
 app.get("/login", function (요청, 응답) {
@@ -220,3 +232,57 @@ passport.use(
     }
   )
 );
+
+passport.serializeUser(function (user, done) {
+  done(null, user.id);
+});
+
+passport.deserializeUser(function (아이디, done) {
+  db.collection("login").findOne({ id: 아이디 }, function (에러, 결과) {
+    done(null, 결과);
+  });
+});
+
+app.get("/mypage", 로그인했니, function (요청, 응답) {
+  console.log(요청.user);
+  응답.render("mypage.ejs", { 사용자: 요청.user });
+});
+
+function 로그인했니(요청, 응답, next) {
+  if (요청.user) {
+    next();
+  } else {
+    응답.send("로그인안하셨는데요?");
+  }
+}
+
+/**검색기능*/
+app.get("/search", (요청, 응답) => {
+  var 검색조건 = [
+    {
+      $search: {
+        index: "titleSearch",
+        text: {
+          query: 요청.query.value,
+          path: "제목", // 제목날짜 둘다 찾고 싶으면 ['제목', '날짜']
+        },
+      },
+    },
+  ];
+  console.log(요청.query);
+  db.collection("post")
+    .aggregate(검색조건)
+    .toArray((에러, 결과) => {
+      console.log(결과);
+      응답.render("search.ejs", { posts: 결과 });
+    });
+});
+
+app.post("/register", function (요청, 응답) {
+  db.collection("login").insertOne(
+    { id: 요청.body.id, pw: 요청.body.pw },
+    function (에러, 결과) {
+      응답.redirect("/");
+    }
+  );
+});
